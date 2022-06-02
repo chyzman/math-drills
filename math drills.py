@@ -1,4 +1,5 @@
 import json
+import math
 import sys
 import random
 from PyQt5.QtCore import *
@@ -25,12 +26,14 @@ def saveconfig():
     with open("config.json", "w") as file:
         json.dump(thevalues, file)
 
-def fixmin():
-    minvalue.setMaximum(maxvalue.value())
+def updatemin():
+    if minvalue.value() > maxvalue.value():
+        maxvalue.setValue(minvalue.value())
     saveconfig()
 
-def fixmax():
-    maxvalue.setMinimum(minvalue.value())
+def updatemax():
+    if maxvalue.value() < minvalue.value():
+        minvalue.setValue(maxvalue.value())
     saveconfig()
 
 def updateremaining():
@@ -81,6 +84,7 @@ def newproblem():
 def finishthegame():
     global endtime
     endtime = time.time()
+    totaltime = endtime - starttime
     progress.setValue(problemcount.value())
 
     finalscore = 0
@@ -94,14 +98,16 @@ def finishthegame():
     scorebox = QMessageBox()
 
     scorebox.setText("You did it i guess")
-    scorebox.setInformativeText(f"you got:\n{finalscore} correct\n{finalfails} wrong")
-    scorebox.setDetailedText(f"you took {endtime - starttime}")
+    scorebox.setInformativeText(f"you got:\n{finalscore} correct\n{finalfails} wrong\nand took:\n{time.strftime('%H:%M:%S', time.gmtime(totaltime)) + str(float(totaltime) - float(math.floor(totaltime)))[1:]}")
+    scorebox.setDetailedText(str([i for i in thesave]))
     scorebox.setStandardButtons(QMessageBox.Ok)
             
     scorebox.exec_()
     returntomenu()
 
 def returntomenu():
+    global thesave
+    thesave = []
     mainframe.hide()
     menu.show()
 
@@ -133,13 +139,13 @@ if __name__ == "__main__":
     rangelabel = QLabel(menu, text="Range:")
     menulayout.addWidget(rangelabel, 3, 0)
 
-    minvalue = QSpinBox(menu, value=thevalues["min"])
+    minvalue = QSpinBox(menu, value=thevalues["min"], minimum=-((2**31)-1), maximum=((2**31)-1))
     menulayout.addWidget(minvalue, 3, 1)
-    minvalue.valueChanged.connect(fixmin)
+    minvalue.valueChanged.connect(updatemin)
 
-    maxvalue = QSpinBox(menu, value=thevalues["max"])
+    maxvalue = QSpinBox(menu, value=thevalues["max"], minimum=-((2**31)-1), maximum=((2**31)-1))
     menulayout.addWidget(maxvalue, 3, 2)
-    maxvalue.valueChanged.connect(fixmax)
+    maxvalue.valueChanged.connect(updatemax)
 
     mainframe = QWidget(window)
     mainframe.resize(300,300)
@@ -160,6 +166,10 @@ if __name__ == "__main__":
     mainframelayout.addWidget(answer, 1, 1)
     answer.setValidator(QIntValidator())
     answer.returnPressed.connect(checkanswer)
+
+    giveupbutton = QPushButton(mainframe, text="give up")
+    mainframelayout.addWidget(giveupbutton, 2, 0, 1, 2)
+    giveupbutton.clicked.connect(returntomenu)
 
     window.show()
     sys.exit(app.exec_())
